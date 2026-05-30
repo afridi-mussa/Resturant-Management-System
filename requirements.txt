@@ -1,0 +1,11 @@
+# BistroSaaS - Python dependencies
+# Install everything with:  pip install -r requirements.txt
+
+Django==6.0.5                 # The web framework that powers the whole project
+djangorestframework==3.17.1   # Adds the REST API (the /api/menu/ JSON endpoints)
+pillow==12.2.0                # Required by Django ImageField for handling image uploads
+
+# --- Sub-dependencies (installed automatically with the packages above) ---
+asgiref==3.11.1               # ASGI support used internally by Django
+sqlparse==0.5.5               # SQL formatting used internally by Django
+tzdata==2026.2                # Timezone database (needed on Windows)

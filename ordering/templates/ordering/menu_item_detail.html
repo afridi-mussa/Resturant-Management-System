@@ -1,0 +1,58 @@
+{# Single dish detail page. Shows full info; Edit/Delete buttons appear only #}
+{# for admins (user.is_superuser).                                           #}
+{% extends "ordering/base.html" %}
+
+{% block title %}{{ item.name }} | BistroSaaS{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'menu_list' %}">Menu</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ item.name }}</li>
+    </ol>
+</nav>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        {% if item.image %}
+            <img src="{{ item.image.url }}" class="img-fluid rounded shadow-sm w-100"
+                 alt="{{ item.name }}" style="max-height: 400px; object-fit: cover;">
+        {% else %}
+            <div class="bg-secondary-subtle d-flex align-items-center justify-content-center rounded"
+                 style="height: 400px;">
+                <i class="bi bi-image text-muted" style="font-size: 5rem;"></i>
+            </div>
+        {% endif %}
+    </div>
+    <div class="col-md-6">
+        <div class="d-flex justify-content-between align-items-start">
+            <h1>{{ item.name }}</h1>
+            {% if item.is_available %}
+                <span class="badge bg-success">Available</span>
+            {% else %}
+                <span class="badge bg-secondary">Unavailable</span>
+            {% endif %}
+        </div>
+
+        <p class="text-muted">
+            <i class="bi bi-tag me-1"></i>{{ item.category.name }}
+        </p>
+
+        <h3 class="text-primary mb-4">${{ item.price }}</h3>
+
+        <p class="lead">{{ item.description }}</p>
+
+        {% if user.is_superuser %}
+            <hr>
+            <div class="d-flex gap-2">
+                <a href="{% url 'menu_item_edit' item.pk %}" class="btn btn-secondary">
+                    <i class="bi bi-pencil me-1"></i>Edit
+                </a>
+                <a href="{% url 'menu_item_delete' item.pk %}" class="btn btn-danger">
+                    <i class="bi bi-trash me-1"></i>Delete
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

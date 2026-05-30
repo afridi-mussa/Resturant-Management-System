@@ -1,0 +1,93 @@
+{# Personal information page. Combines two forms: user_form (name/email) and #}
+{# profile_form (phone/address/picture). Needs multipart for the upload.     #}
+{% extends "ordering/base.html" %}
+
+{% block title %}My Profile | BistroSaaS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-7">
+
+        <div class="d-flex align-items-center mb-4">
+            {% if user.profile.profile_pic %}
+                <img src="{{ user.profile.profile_pic.url }}" alt="Profile picture"
+                     class="rounded-circle me-3"
+                     style="width: 72px; height: 72px; object-fit: cover;">
+            {% else %}
+                <i class="bi bi-person-circle text-secondary me-3" style="font-size: 4rem;"></i>
+            {% endif %}
+            <div>
+                <h1 class="mb-0">{{ user.username }}</h1>
+                <span class="text-muted">Personal Information</span>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+
+                    <h5 class="mb-3">Account Details</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ user_form.first_name.id_for_label }}" class="form-label">First Name</label>
+                            {{ user_form.first_name }}
+                            {% for error in user_form.first_name.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ user_form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                            {{ user_form.last_name }}
+                            {% for error in user_form.last_name.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ user_form.email.id_for_label }}" class="form-label">Email</label>
+                        {{ user_form.email }}
+                        {% for error in user_form.email.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h5 class="mb-3">Contact &amp; Address</h5>
+                    <div class="mb-3">
+                        <label for="{{ profile_form.phone.id_for_label }}" class="form-label">Phone Number</label>
+                        {{ profile_form.phone }}
+                        {% for error in profile_form.phone.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ profile_form.address.id_for_label }}" class="form-label">Address</label>
+                        {{ profile_form.address }}
+                        {% for error in profile_form.address.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ profile_form.profile_pic.id_for_label }}" class="form-label">Profile Picture</label>
+                        {{ profile_form.profile_pic }}
+                        {% for error in profile_form.profile_pic.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i>Save Changes
+                        </button>
+                        <a href="{% url 'change_password' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-key me-1"></i>Change Password
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

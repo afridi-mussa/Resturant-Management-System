@@ -1,0 +1,142 @@
+{# Admin-only dashboard to review every order and change its status. Each    #}
+{# status button posts to update_order_status, which notifies the customer.  #}
+{% extends "ordering/base.html" %}
+
+{% block title %}Manage Orders | BistroSaaS{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-clipboard-check me-2"></i>Manage Orders</h1>
+
+<!-- Status filter -->
+<div class="mb-4 d-flex flex-wrap gap-2">
+    <a href="{% url 'manage_orders' %}"
+       class="btn btn-sm {% if not selected_status %}btn-primary{% else %}btn-outline-primary{% endif %}">
+        All
+    </a>
+    {% for value, label in statuses %}
+        <a href="?status={{ value }}"
+           class="btn btn-sm {% if selected_status == value %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            {{ label }}
+        </a>
+    {% endfor %}
+</div>
+
+{% for order in orders %}
+    <div class="card shadow-sm mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span>
+                <strong>Order #{{ order.pk }}</strong>
+                <span class="text-muted ms-2">
+                    <i class="bi bi-person me-1"></i>{{ order.user.username }}
+                </span>
+                <small class="text-muted ms-2">
+                    <i class="bi bi-clock me-1"></i>{{ order.created_at|date:"M d, Y H:i" }}
+                </small>
+            </span>
+            <span>
+                {% if order.status == "Pending" %}
+                    <span class="badge bg-warning text-dark">{{ order.status }}</span>
+                {% elif order.status == "Preparing" %}
+                    <span class="badge bg-info text-dark">{{ order.status }}</span>
+                {% elif order.status == "Completed" %}
+                    <span class="badge bg-success">{{ order.status }}</span>
+                {% elif order.status == "Cancelled" %}
+                    <span class="badge bg-danger">{{ order.status }}</span>
+                {% endif %}
+            </span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-7">
+                    <ul class="list-unstyled mb-0">
+                        {% for item in order.items.all %}
+                            <li class="d-flex justify-content-between border-bottom py-1">
+                                <span>{{ item.name }}</span>
+                                <span class="text-muted">${{ item.price }}</span>
+                            </li>
+                        {% endfor %}
+                        <li class="d-flex justify-content-between fw-bold pt-2">
+                            <span>Total</span>
+                            <span class="text-primary">${{ order.total_amount }}</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-5 mt-3 mt-md-0">
+                    <p class="mb-2 fw-semibold">Update status:</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if order.status == "Pending" %}
+                            <form method="post" action="{% url 'update_order_status' order.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="Preparing">
+                                <button class="btn btn-success btn-sm">
+                                    <i class="bi bi-check-lg me-1"></i>Confirm &amp; Prepare
+                                </button>
+                            </form>
+                        {% endif %}
+                        {% if order.status != "Completed" and order.status != "Cancelled" %}
+                            <form method="post" action="{% url 'update_order_status' order.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="Completed">
+                                <button class="btn btn-primary btn-sm">
+                                    <i class="bi bi-bag-check me-1"></i>Mark Completed
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'update_order_status' order.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="Cancelled">
+                                <button class="btn btn-outline-danger btn-sm">
+                                    <i class="bi bi-x-lg me-1"></i>Cancel Order
+                                </button>
+                            </form>
+                        {% else %}
+                            <span class="text-muted small">No further actions.</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% empty %}
+    <div class="alert alert-info">No orders found.</div>
+{% endfor %}
+
+{% if is_paginated %}
+    <nav aria-label="Orders pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link"><i class="bi bi-chevron-left"></i> Previous</span>
+                </li>
+            {% endif %}
+
+            {% for num in paginator.page_range %}
+                {% if num == page_obj.number %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if selected_status %}&status={{ selected_status }}{% endif %}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next <i class="bi bi-chevron-right"></i></span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}
+{% endblock %}

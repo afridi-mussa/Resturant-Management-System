@@ -1,0 +1,19 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+
+# --- Virtual environment (machine-specific, never commit) ---
+venv/
+env/
+.venv/
+
+# --- Editor / OS files ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# NOTE: media/ (uploaded images) and db.sqlite3 ARE committed on purpose so the
+# full project, including menu images and sample data, is available on GitHub.

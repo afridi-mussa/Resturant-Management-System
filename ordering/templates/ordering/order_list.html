@@ -1,0 +1,121 @@
+{# Customer's order history. Orders the admin recently updated are listed in #}
+{# updated_order_ids and get highlighted with a green border + banner.       #}
+{% extends "ordering/base.html" %}
+
+{% block title %}My Orders | BistroSaaS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0"><i class="bi bi-bag-check me-2"></i>My Orders</h1>
+    <a href="{% url 'place_order' %}" class="btn btn-success">
+        <i class="bi bi-cart-plus me-1"></i>New Order
+    </a>
+</div>
+
+{% if updated_order_ids %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-bell-fill me-1"></i>
+        Good news! The status of
+        {{ updated_order_ids|length }} of your order{{ updated_order_ids|length|pluralize }}
+        {{ updated_order_ids|length|pluralize:"has,have" }} been updated by the restaurant.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{% endif %}
+
+{% for order in orders %}
+    <div class="card shadow-sm mb-3 {% if order.id in updated_order_ids %}border-success border-2{% endif %}">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>
+                <strong>Order #{{ order.pk }}</strong>
+                {% if order.id in updated_order_ids %}
+                    <span class="badge bg-success ms-1"><i class="bi bi-bell-fill me-1"></i>Updated</span>
+                {% endif %}
+                <small class="text-muted ms-2">
+                    <i class="bi bi-clock me-1"></i>{{ order.created_at|date:"M d, Y H:i" }}
+                </small>
+            </span>
+            <span>
+                {% if order.status == "Pending" %}
+                    <span class="badge bg-warning text-dark">{{ order.status }}</span>
+                {% elif order.status == "Preparing" %}
+                    <span class="badge bg-info text-dark">{{ order.status }}</span>
+                {% elif order.status == "Completed" %}
+                    <span class="badge bg-success">{{ order.status }}</span>
+                {% elif order.status == "Cancelled" %}
+                    <span class="badge bg-danger">{{ order.status }}</span>
+                {% endif %}
+            </span>
+        </div>
+        <div class="card-body">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th class="text-end">Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items.all %}
+                        <tr>
+                            <td>{{ item.name }}</td>
+                            <td class="text-end">${{ item.price }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold border-top">
+                        <td>Total</td>
+                        <td class="text-end text-primary">${{ order.total_amount }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+{% empty %}
+    <div class="alert alert-info">
+        You haven't placed any orders yet.
+        <a href="{% url 'place_order' %}" class="alert-link">Place your first order!</a>
+    </div>
+{% endfor %}
+
+<!-- Pagination -->
+{% if is_paginated %}
+    <nav aria-label="Orders pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link"><i class="bi bi-chevron-left"></i> Previous</span>
+                </li>
+            {% endif %}
+
+            {% for num in paginator.page_range %}
+                {% if num == page_obj.number %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next <i class="bi bi-chevron-right"></i></span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}
+{% endblock %}
