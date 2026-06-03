@@ -25,7 +25,10 @@ SECRET_KEY = 'django-insecure-!9vu-ra9)1-fsc&b$py*73s3uye&vrxb4lw%n%qx)f%lq)8hl$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Hosts/domains this site can be served from.
+# '.pythonanywhere.com' matches ANY PythonAnywhere subdomain (e.g.
+# yourname.pythonanywhere.com), so you don't have to edit it after deploying.
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.pythonanywhere.com']
 
 
 # Application definition
@@ -121,6 +124,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+# Folder where `python manage.py collectstatic` gathers all static files
+# (needed so the /admin/ page looks styled when deployed on PythonAnywhere).
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (user-uploaded content, e.g. menu item images)
 # https://docs.djangoproject.com/en/6.0/topics/files/

@@ -9,6 +9,9 @@ venv/
 env/
 .venv/
 
+# --- Collected static files (generated on the server by collectstatic) ---
+staticfiles/
+
 # --- Editor / OS files ---
 .vscode/
 .idea/
