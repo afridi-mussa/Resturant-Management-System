@@ -384,226 +384,319 @@ def build_report():
 def build_presentation():
     from pptx import Presentation
     from pptx.dml.color import RGBColor
-    from pptx.enum.text import PP_ALIGN
+    from pptx.enum.shapes import MSO_SHAPE
+    from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
     from pptx.util import Inches, Pt
+
+    # --- Theme palette (matches the BistroSaaS website: dark navbar + warm accent) ---
+    DARK = RGBColor(0x1E, 0x2A, 0x38)    # deep slate (navbar feel)
+    ACCENT = RGBColor(0xFF, 0x6B, 0x35)  # warm orange (food/brand accent)
+    LIGHT = RGBColor(0xF5, 0xF7, 0xFA)   # content background
+    TEXT = RGBColor(0x24, 0x31, 0x40)    # body text
+    MUTED = RGBColor(0x8A, 0x97, 0xA5)   # footer/secondary
+    WHITE = RGBColor(0xFF, 0xFF, 0xFF)
+    SOFT = RGBColor(0xFD, 0xE8, 0xDF)    # light orange wash
+    FONT = "Segoe UI"
 
     prs = Presentation()
     prs.slide_width = Inches(13.333)
     prs.slide_height = Inches(7.5)
+    SW, SH = prs.slide_width, prs.slide_height
     BLANK = prs.slide_layouts[6]
-    BLUE = RGBColor(0x29, 0x80, 0xB9)
-    DARK = RGBColor(0x2C, 0x3E, 0x50)
 
-    def add_title_slide(title, subtitle):
-        slide = prs.slides.add_slide(BLANK)
-        bar = slide.shapes.add_shape(1, 0, Inches(2.3), prs.slide_width, Inches(1.4))
-        bar.fill.solid()
-        bar.fill.fore_color.rgb = BLUE
-        bar.line.fill.background()
-        tb = slide.shapes.add_textbox(Inches(0.8), Inches(2.45), Inches(11.7), Inches(1.1))
-        p = tb.text_frame.paragraphs[0]
-        p.alignment = PP_ALIGN.CENTER
+    def _no_line(shape):
+        shape.line.fill.background()
+
+    def _fill(shape, color):
+        shape.fill.solid()
+        shape.fill.fore_color.rgb = color
+        _no_line(shape)
+
+    def _bg(slide, color):
+        slide.background.fill.solid()
+        slide.background.fill.fore_color.rgb = color
+
+    def _run(p, text, size, color, bold=False, italic=False):
         r = p.add_run()
-        r.text = title
-        r.font.size = Pt(44)
-        r.font.bold = True
-        r.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-        st = slide.shapes.add_textbox(Inches(0.8), Inches(3.9), Inches(11.7), Inches(1.2))
-        sp = st.text_frame.paragraphs[0]
-        sp.alignment = PP_ALIGN.CENTER
-        sr = sp.add_run()
-        sr.text = subtitle
-        sr.font.size = Pt(22)
-        sr.font.color.rgb = DARK
-        return slide
+        r.text = text
+        r.font.size = Pt(size)
+        r.font.color.rgb = color
+        r.font.bold = bold
+        r.font.italic = italic
+        r.font.name = FONT
+        return r
 
-    def add_content_slide(title, bullets, image=None):
+    def _footer(slide, idx):
+        line = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, Inches(0.55), Inches(7.0), Inches(12.25), Pt(1.4))
+        _fill(line, RGBColor(0xDD, 0xE3, 0xE9))
+        ft = slide.shapes.add_textbox(Inches(0.55), Inches(7.05), Inches(9), Inches(0.35))
+        _run(ft.text_frame.paragraphs[0],
+             "BistroSaaS  |  Restaurant Management System", 10, MUTED)
+        nt = slide.shapes.add_textbox(Inches(11.6), Inches(7.05), Inches(1.2), Inches(0.35))
+        np = nt.text_frame.paragraphs[0]
+        np.alignment = PP_ALIGN.RIGHT
+        _run(np, str(idx), 10, MUTED, bold=True)
+
+    def _title_block(slide, title, emoji=""):
+        # left accent stripe
+        stripe = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, Inches(0.18), SH)
+        _fill(stripe, ACCENT)
+        # decorative soft circle top-right with emoji
+        if emoji:
+            circ = slide.shapes.add_shape(
+                MSO_SHAPE.OVAL, Inches(11.55), Inches(0.45), Inches(1.25), Inches(1.25))
+            _fill(circ, SOFT)
+            et = slide.shapes.add_textbox(Inches(11.55), Inches(0.5), Inches(1.25), Inches(1.15))
+            ep = et.text_frame.paragraphs[0]
+            ep.alignment = PP_ALIGN.CENTER
+            _run(ep, emoji, 36, TEXT)
+        # title
+        tt = slide.shapes.add_textbox(Inches(0.55), Inches(0.45), Inches(10.6), Inches(0.85))
+        _run(tt.text_frame.paragraphs[0], title, 32, DARK, bold=True)
+        # underline accent
+        ul = slide.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.6), Inches(1.28), Inches(2.5), Inches(0.09))
+        _fill(ul, ACCENT)
+
+    def add_content_slide(idx, title, bullets, emoji="", image=None):
         slide = prs.slides.add_slide(BLANK)
-        # title bar
-        bar = slide.shapes.add_shape(1, 0, 0, prs.slide_width, Inches(1.1))
-        bar.fill.solid()
-        bar.fill.fore_color.rgb = BLUE
-        bar.line.fill.background()
-        tt = slide.shapes.add_textbox(Inches(0.5), Inches(0.18), Inches(12.3), Inches(0.8))
-        tp = tt.text_frame.paragraphs[0]
-        tr = tp.add_run()
-        tr.text = title
-        tr.font.size = Pt(30)
-        tr.font.bold = True
-        tr.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-
-        body_w = Inches(7.2) if image else Inches(12.3)
-        body = slide.shapes.add_textbox(Inches(0.6), Inches(1.4), body_w, Inches(5.6))
+        _bg(slide, LIGHT)
+        _title_block(slide, title, emoji)
+        body_w = Inches(6.7) if image else Inches(11.8)
+        body = slide.shapes.add_textbox(Inches(0.7), Inches(1.7), body_w, Inches(5.0))
         tf = body.text_frame
         tf.word_wrap = True
         first = True
         for b in bullets:
             p = tf.paragraphs[0] if first else tf.add_paragraph()
             first = False
-            r = p.add_run()
-            r.text = b
-            r.font.size = Pt(20)
-            r.font.color.rgb = DARK
-            p.space_after = Pt(10)
+            p.space_after = Pt(13)
+            if b == "":
+                _run(p, " ", 18, TEXT)
+                continue
+            _run(p, "\u25B8  ", 20, ACCENT, bold=True)   # ▸ marker
+            _run(p, b, 20, TEXT)
         if image and os.path.exists(image):
-            slide.shapes.add_picture(image, Inches(8.0), Inches(1.5), width=Inches(4.9))
+            # white card behind the image
+            card = slide.shapes.add_shape(
+                MSO_SHAPE.ROUNDED_RECTANGLE, Inches(7.45), Inches(1.65),
+                Inches(5.4), Inches(4.9))
+            _fill(card, WHITE)
+            slide.shapes.add_picture(image, Inches(7.6), Inches(2.6), width=Inches(5.1))
+        _footer(slide, idx)
         return slide
 
-    # 1. Title
-    add_title_slide("BistroSaaS", "Restaurant Management & Online Ordering System")
-    # 2. Group members
-    add_content_slide("Group Members", [
-        "Mussa Afridi - Backend & Deployment",
-        "[ Member 2 - role ]",
-        "[ Member 3 - role ]",
-        "[ Member 4 - role ]",
+    def add_banner_slide(title_lines, subtitle, tag):
+        slide = prs.slides.add_slide(BLANK)
+        _bg(slide, DARK)
+        # accent side bar
+        bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, Inches(0.35), SH)
+        _fill(bar, ACCENT)
+        # decorative ring
+        ring = slide.shapes.add_shape(
+            MSO_SHAPE.OVAL, Inches(10.4), Inches(4.3), Inches(3.2), Inches(3.2))
+        ring.fill.background()
+        ring.line.color.rgb = ACCENT
+        ring.line.width = Pt(2.5)
+        # plate emoji
+        et = slide.shapes.add_textbox(Inches(0.9), Inches(1.5), Inches(3), Inches(1.2))
+        _run(et.text_frame.paragraphs[0], "\U0001F37D", 60, WHITE)  # plate w/ cutlery
+        # title
+        tb = slide.shapes.add_textbox(Inches(0.9), Inches(2.7), Inches(11), Inches(2.0))
+        tf = tb.text_frame
+        first = True
+        for ln, sz in title_lines:
+            p = tf.paragraphs[0] if first else tf.add_paragraph()
+            first = False
+            _run(p, ln, sz, WHITE, bold=True)
+        # accent line
+        ul = slide.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.95), Inches(4.55), Inches(3.0), Inches(0.1))
+        _fill(ul, ACCENT)
+        # subtitle
+        st = slide.shapes.add_textbox(Inches(0.9), Inches(4.8), Inches(10.5), Inches(0.8))
+        _run(st.text_frame.paragraphs[0], subtitle, 22, RGBColor(0xD7, 0xDE, 0xE5))
+        # tag pill
+        pill = slide.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.95), Inches(5.7), Inches(3.5), Inches(0.55))
+        _fill(pill, ACCENT)
+        pp = pill.text_frame.paragraphs[0]
+        pp.alignment = PP_ALIGN.CENTER
+        pill.text_frame.word_wrap = True
+        _run(pp, tag, 16, WHITE, bold=True)
+        return slide
+
+    # ---------- 1. Title ----------
+    add_banner_slide(
+        [("BistroSaaS", 54)],
+        "Restaurant Management & Online Ordering System",
+        "PROJECT PRESENTATION",
+    )
+
+    # ---------- 2. Group members ----------
+    add_content_slide(2, "Group Members", [
+        "Mussa Afridi  -  Backend & Deployment",
+        "[ Member 2  -  role ]",
+        "[ Member 3  -  role ]",
+        "[ Member 4  -  role ]",
         "",
-        "Course: ____________    Instructor: ____________",
-    ])
-    # 3. Introduction
-    add_content_slide("Introduction", [
+        "Course: ____________     Instructor: ____________",
+    ], emoji="\U0001F465")
+
+    # ---------- 3. Introduction ----------
+    add_content_slide(3, "Introduction", [
         "A full-stack web application for restaurant ordering & management.",
         "Built with the Django web framework (Python).",
         "Customers browse a menu, place orders, and track status.",
         "Admins manage the menu and confirm orders.",
         "Modern, responsive UI using Bootstrap 5.",
-    ])
-    # 4. Problem statement
-    add_content_slide("Problem Statement", [
+    ], emoji="\U0001F4D6")
+
+    # ---------- 4. Problem statement ----------
+    add_content_slide(4, "Problem Statement", [
         "Manual, paper-based order taking causes errors.",
         "No central searchable menu or order records.",
         "Customers cannot view the menu or order online.",
         "Hard to track live order status.",
-        "Menu/price/availability updates are slow.",
-    ])
-    # 5. Objectives
-    add_content_slide("Objectives", [
+        "Menu / price / availability updates are slow.",
+    ], emoji="\u2753")
+
+    # ---------- 5. Objectives ----------
+    add_content_slide(5, "Objectives", [
         "Secure registration & login (Customer / Admin roles).",
         "Browse menu with search, filter & pagination.",
         "Online order placement + order history.",
         "Admin CRUD on menu items with image uploads.",
         "Order confirmation workflow with notifications.",
         "REST API for menu data + responsive UI.",
-    ])
-    # 6. Tools & technologies
-    add_content_slide("Tools & Technologies", [
+    ], emoji="\U0001F3AF")
+
+    # ---------- 6. Tools & technologies ----------
+    add_content_slide(6, "Tools & Technologies", [
         "Python 3 + Django 6.0.5 (MVT framework).",
         "Django REST Framework (JSON API).",
         "SQLite database.",
         "Bootstrap 5 + HTML (frontend).",
         "Pillow (image uploads).",
         "Git & GitHub, deployed on PythonAnywhere.",
-    ])
-    # 7. System architecture
-    add_content_slide("System Architecture (MVT)", [
-        "Model (models.py) - database tables.",
-        "View (views.py) - page logic (FBV + CBV).",
-        "Template (HTML) - Bootstrap pages shown to user.",
-        "URLs (urls.py) - map addresses to views.",
-        "Flow: URL -> View -> Model (data) -> Template -> Browser.",
-    ])
-    # 8. User roles
-    add_content_slide("User Roles", [
-        "Guest - browse menu & read API only.",
-        "Customer - place orders, view history, edit profile.",
-        "Admin (superuser) - full menu & order management + Django admin.",
+    ], emoji="\U0001F6E0")
+
+    # ---------- 7. System architecture ----------
+    add_content_slide(7, "System Architecture (MVT)", [
+        "Model (models.py)  -  database tables.",
+        "View (views.py)  -  page logic (FBV + CBV).",
+        "Template (HTML)  -  Bootstrap pages shown to user.",
+        "URLs (urls.py)  -  map addresses to views.",
+        "Flow:  URL  ->  View  ->  Model (data)  ->  Template  ->  Browser.",
+    ], emoji="\U0001F3D7")
+
+    # ---------- 8. User roles ----------
+    add_content_slide(8, "User Roles", [
+        "Guest  -  browse menu & read API only.",
+        "Customer  -  place orders, view history, edit profile.",
+        "Admin (superuser)  -  full menu & order management + Django admin.",
         "Admin sign-up is protected by a secret key.",
-    ])
-    # 9. Database design (with ER diagram)
-    add_content_slide("Database Design", [
+    ], emoji="\U0001F511")
+
+    # ---------- 9. Database design (ER diagram) ----------
+    add_content_slide(9, "Database Design", [
         "4 main tables + Django User.",
-        "User 1-1 CustomerProfile.",
-        "User 1-M Order.",
-        "Category 1-M MenuItem.",
-        "Order M-N MenuItem.",
-    ], image=ER_PATH)
-    # 10. Features overview
-    add_content_slide("Features Overview", [
+        "User  1-1  CustomerProfile.",
+        "User  1-M  Order.",
+        "Category  1-M  MenuItem.",
+        "Order  M-N  MenuItem.",
+    ], emoji="\U0001F5C4", image=ER_PATH)
+
+    # ---------- 10. Features overview ----------
+    add_content_slide(10, "Features Overview", [
         "Authentication with two roles.",
         "Menu browsing: search, filter, pagination.",
         "Menu CRUD with image uploads (admin).",
         "Online ordering with live total.",
         "Order confirmation & notifications.",
         "User profiles + REST API.",
-    ])
-    # 11. Authentication & roles
-    add_content_slide("Authentication & Roles", [
+    ], emoji="\u2B50")
+
+    # ---------- 11. Authentication & roles ----------
+    add_content_slide(11, "Authentication & Roles", [
         "Register, Login, Logout (Django auth).",
         "Role dropdown: Customer (default) or Admin.",
         "Admin requires Secret Key (admin123).",
         "Profile auto-created for every user (signal).",
-    ])
-    # 12. Menu management
-    add_content_slide("Menu Management (CRUD)", [
+    ], emoji="\U0001F510")
+
+    # ---------- 12. Menu management ----------
+    add_content_slide(12, "Menu Management (CRUD)", [
         "Admins add / edit / delete menu items.",
         "Image upload for each dish (Pillow).",
         "Items grouped by category.",
         "Class-Based Views + access control (admin only).",
-    ])
-    # 13. Search/filter/pagination
-    add_content_slide("Search, Filter & Pagination", [
+    ], emoji="\U0001F354")
+
+    # ---------- 13. Search/filter/pagination ----------
+    add_content_slide(13, "Search, Filter & Pagination", [
         "Search dishes by name or description (?q=).",
         "Filter by category buttons (?category=).",
-        "6 items per page with Previous/Next controls.",
+        "6 items per page with Previous / Next controls.",
         "Implemented in MenuListView.",
-    ])
-    # 14. Order placement
-    add_content_slide("Order Placement Flow", [
+    ], emoji="\U0001F50D")
+
+    # ---------- 14. Order placement ----------
+    add_content_slide(14, "Order Placement Flow", [
         "Customer selects items with checkboxes.",
         "Live JavaScript total updates instantly.",
         "Server recomputes the real total on submit.",
         "Order saved with status = Pending.",
-    ])
-    # 15. Order confirmation & notifications
-    add_content_slide("Order Confirmation & Notifications", [
+    ], emoji="\U0001F6D2")
+
+    # ---------- 15. Order confirmation & notifications ----------
+    add_content_slide(15, "Order Confirmation & Notifications", [
         "Admin updates status: Pending -> Preparing -> Completed / Cancelled.",
         "Customer gets a red notification badge.",
         "Updated orders highlighted on 'My Orders'.",
         "Badge clears when the customer views orders.",
-    ])
-    # 16. User profile
-    add_content_slide("User Profile", [
+    ], emoji="\U0001F514")
+
+    # ---------- 16. User profile ----------
+    add_content_slide(16, "User Profile", [
         "Edit first name, last name, email.",
         "Edit phone, address, profile picture.",
         "Change password (new + confirm).",
         "Accessible from the navbar profile dropdown.",
-    ])
-    # 17. REST API
-    add_content_slide("REST API (Bonus)", [
+    ], emoji="\U0001F464")
+
+    # ---------- 17. REST API ----------
+    add_content_slide(17, "REST API (Bonus)", [
         "Built with Django REST Framework.",
-        "GET /api/menu/ - list all items as JSON.",
-        "GET /api/menu/<id>/ - single item.",
+        "GET /api/menu/  -  list all items as JSON.",
+        "GET /api/menu/<id>/  -  single item.",
         "Browsable API in the browser.",
         "Permission: read for all, write for logged-in users.",
-    ])
-    # 18. Admin panel
-    add_content_slide("Django Admin Panel", [
+    ], emoji="\U0001F517")
+
+    # ---------- 18. Admin panel ----------
+    add_content_slide(18, "Django Admin Panel", [
         "Manage Users, Categories, Menu Items, Orders.",
         "Search, filters, and inline editing.",
         "Custom red 'Cancel' button on all forms.",
-        "Admins cannot see/delete their own account.",
-    ])
-    # 19. Deployment
-    add_content_slide("Version Control & Deployment", [
+        "Admins cannot see / delete their own account.",
+    ], emoji="\u2699")
+
+    # ---------- 19. Deployment ----------
+    add_content_slide(19, "Version Control & Deployment", [
         "Source code hosted on GitHub.",
         "Live deployment on PythonAnywhere.",
         "Steps: clone -> venv -> install -> migrate -> configure web app.",
         "Live URL: mussa.pythonanywhere.com",
-    ])
-    # 20. Conclusion / Thank you
-    s = add_content_slide("Conclusion", [
-        "A complete full-stack Django application.",
-        "Covers DB design, auth, CRUD, API, and deployment.",
-        "Hands-on experience with real-world web development.",
-        "Future: online payments, email alerts, reviews.",
-    ])
-    tb = s.shapes.add_textbox(Inches(0.6), Inches(6.4), Inches(12), Inches(0.8))
-    p = tb.text_frame.paragraphs[0]
-    r = p.add_run()
-    r.text = "Thank You!  (Live demonstration to follow)"
-    r.font.size = Pt(24)
-    r.font.bold = True
-    r.font.color.rgb = BLUE
+    ], emoji="\U0001F680")
+
+    # ---------- 20. Conclusion / Thank you ----------
+    add_banner_slide(
+        [("Conclusion", 40), ("Thank You!", 30)],
+        "A complete full-stack Django app  -  live demonstration to follow.",
+        "QUESTIONS  &  DEMO",
+    )
 
     prs.save(PPTX_PATH)
     print("Saved:", PPTX_PATH)
