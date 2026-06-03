@@ -14,6 +14,13 @@ DOCS_DIR = os.path.dirname(os.path.abspath(__file__))
 ER_PATH = os.path.join(DOCS_DIR, "er_diagram.png")
 DOCX_PATH = os.path.join(DOCS_DIR, "Project_Report.docx")
 PPTX_PATH = os.path.join(DOCS_DIR, "Project_Presentation.pptx")
+SHOTS_DIR = os.path.join(DOCS_DIR, "screenshots")
+
+
+def shot_path(filename):
+    """Return the full path of a captured screenshot if it exists, else None."""
+    p = os.path.join(SHOTS_DIR, filename)
+    return p if os.path.exists(p) else None
 
 
 # ----------------------------------------------------------------------------
@@ -297,28 +304,36 @@ def build_report():
     # ---- Screenshots ----
     heading("Screenshots")
     doc.add_paragraph(
-        "Insert screenshots of the running application below. Recommended pages "
-        "to capture (from your live site):"
+        "The following screenshots were captured from the running BistroSaaS "
+        "application and demonstrate its main features and pages."
     )
+    # (caption, screenshot filename) - order them logically through the app
     shots = [
-        "Home / Menu page (with search and category filters)",
-        "Registration page (showing the Role dropdown and Secret Key)",
-        "Login page",
-        "Menu item detail page",
-        "Add / Edit menu item form (admin)",
-        "Place Order page (with live total)",
-        "My Orders page (with status badges and notifications)",
-        "Manage Orders page (admin order confirmation)",
-        "User Profile page",
-        "Django Admin panel",
-        "REST API page (/api/menu/)",
+        ("Home / Menu page (with search and category filters)", "01_menu_page.png"),
+        ("Registration page (Role dropdown and Secret Key)", "02_register.png"),
+        ("Login page", "03_login.png"),
+        ("Menu item detail page", "04_item_detail.png"),
+        ("Add / Edit menu item form (admin)", "05_add_item.png"),
+        ("Place Order page (with live total)", "06_place_order.png"),
+        ("My Orders page (status badges and notifications)", "07_my_orders.png"),
+        ("Manage Orders page (admin order confirmation)", "08_manage_orders.png"),
+        ("User Profile page", "09_profile.png"),
+        ("Django Admin panel", "10_admin.png"),
+        ("REST API page (/api/menu/)", "11_api.png"),
     ]
-    for i, s in enumerate(shots, 1):
+    for i, (caption, fname) in enumerate(shots, 1):
         p = doc.add_paragraph()
-        p.add_run(f"Screenshot {i}: {s}").bold = True
-        ph = doc.add_paragraph("[ Paste screenshot here ]")
-        ph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        ph.runs[0].italic = True
+        p.add_run(f"Screenshot {i}: {caption}").bold = True
+        img = shot_path(fname)
+        if img:
+            doc.add_picture(img, width=Inches(6.2))
+            pic_par = doc.paragraphs[-1]
+            pic_par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        else:
+            ph = doc.add_paragraph("[ Paste screenshot here ]")
+            ph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            ph.runs[0].italic = True
+        doc.add_paragraph()
 
     # ---- Tools & technologies ----
     heading("Tools & Technologies Used")
@@ -484,6 +499,33 @@ def build_presentation():
                 Inches(5.4), Inches(4.9))
             _fill(card, WHITE)
             slide.shapes.add_picture(image, Inches(7.6), Inches(2.6), width=Inches(5.1))
+        _footer(slide, idx)
+        return slide
+
+    def add_screenshot_slide(idx, title, image, emoji="\U0001F4F8"):
+        """A content slide that displays a single application screenshot on a card."""
+        slide = prs.slides.add_slide(BLANK)
+        _bg(slide, LIGHT)
+        _title_block(slide, title, emoji)
+        if image and os.path.exists(image):
+            # Fit the image inside a max box, preserving aspect ratio, centered.
+            max_w, max_h = Inches(11.6), Inches(4.95)
+            try:
+                with Image.open(image) as im:
+                    iw, ih = im.size
+            except Exception:
+                iw, ih = 1366, 900
+            ratio = min(max_w / iw, max_h / ih)
+            pic_w, pic_h = int(iw * ratio), int(ih * ratio)
+            left = int((SW - pic_w) / 2)
+            top = Inches(1.75)
+            # white card behind the screenshot
+            pad = Inches(0.12)
+            card = slide.shapes.add_shape(
+                MSO_SHAPE.ROUNDED_RECTANGLE,
+                left - pad, top - pad, pic_w + 2 * pad, pic_h + 2 * pad)
+            _fill(card, WHITE)
+            slide.shapes.add_picture(image, left, top, width=pic_w, height=pic_h)
         _footer(slide, idx)
         return slide
 
@@ -691,7 +733,35 @@ def build_presentation():
         "Live URL: mussa.pythonanywhere.com",
     ], emoji="\U0001F680")
 
-    # ---------- 20. Conclusion / Thank you ----------
+    # ---------- 20. Demonstration divider ----------
+    add_content_slide(20, "Project Demonstration", [
+        "Live screenshots from the running application.",
+        "Walking through the main pages and features.",
+        "Customer journey + Admin management.",
+    ], emoji="\U0001F4F8")
+
+    # ---------- 21+. Screenshot slides ----------
+    screenshot_slides = [
+        ("Home / Menu Page", "01_menu_page.png"),
+        ("Registration", "02_register.png"),
+        ("Login", "03_login.png"),
+        ("Menu Item Detail", "04_item_detail.png"),
+        ("Add Menu Item (Admin)", "05_add_item.png"),
+        ("Place Order", "06_place_order.png"),
+        ("My Orders", "07_my_orders.png"),
+        ("Manage Orders (Admin)", "08_manage_orders.png"),
+        ("User Profile", "09_profile.png"),
+        ("Django Admin Panel", "10_admin.png"),
+        ("REST API (/api/menu/)", "11_api.png"),
+    ]
+    idx = 21
+    for title, fname in screenshot_slides:
+        img = os.path.join(SHOTS_DIR, fname)
+        if os.path.exists(img):
+            add_screenshot_slide(idx, title, img)
+            idx += 1
+
+    # ---------- Conclusion / Thank you ----------
     add_banner_slide(
         [("Conclusion", 40), ("Thank You!", 30)],
         "A complete full-stack Django app  -  live demonstration to follow.",
